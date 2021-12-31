@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<AssemblyName>CheatGearMemory</AssemblyName>
+		<RootNamespace>CG.Memory</RootNamespace>
+		<AssemblyVersion>1.0.1.0</AssemblyVersion>
+		<FileVersion>1.0.1.0</FileVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove=".gitignore" />
+	  <None Remove="LICENSE" />
+	  <None Remove="README.md" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\CG.Framework\CG.Framework.csproj" />
+	</ItemGroup>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
+		<Exec Command="xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)build\Settings\Plugins\Memory\&quot; /F /Y /I" />
+	</Target>
+</Project>
