@@ -6,7 +6,7 @@ using CG.Framework.Plugin.Memory;
 namespace CG.Memory;
 
 [PluginInfo("CorrM", "MemoryManager", "Normal RPM/WPM API to read/write memory of process.")]
-public class CheatGearMemory : MemoryPlugin
+public class Native : MemoryPlugin
 {
     [Flags]
     public enum ProcessAccessFlags : uint
