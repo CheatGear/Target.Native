@@ -24,7 +24,7 @@ internal enum ProcessAccessFlags : uint
     All = 0x001F0FFF
 }
 
-[PluginInfo("CorrM", "Native", "Use current system API to read/write memory process")]
+[PluginInfo("CorrM", "Native", "Use current system API to read/write memory process", "https://github.com/CheatGear", "https://github.com/CheatGear/Memory.Native")]
 public class Native : MemoryPlugin
 {
     [DllImport("kernel32.dll", SetLastError = true)]
@@ -42,31 +42,33 @@ public class Native : MemoryPlugin
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool CloseHandle(UIntPtr hHandle);
 
+    public override Version TargetFrameworkVersion { get; } = new(3, 0, 0);
+    public override Version PluginVersion { get; } = new(3, 0, 0);
     public override UIntPtr ProcessHandle { get; protected set; }
     public override bool Is64Bit { get; protected set; }
-    public override bool IsSetup { get; protected set; }
+    public override bool IsInitialized { get; protected set; }
 
     public static bool Is64BitProcess(UIntPtr processHandle)
     {
         return IsWow64Process(processHandle, out bool retVal) && !retVal;
     }
 
-    public override void Setup(MemorySetupInfo info)
+    public override bool Init(MemoryInitInfo info)
     {
         ProcessHandle = OpenProcess(ProcessAccessFlags.All, false, info.Process.Id);
         Is64Bit = Is64BitProcess(ProcessHandle);
 
-        IsSetup = true;
+        return IsInitialized = true;
     }
 
-    public override bool ReadBytes(UIntPtr address, int size, out ReadOnlySpan<byte> buffer, out int numberOfBytesRead)
+    public override bool ReadBytes(UIntPtr address, int size, out byte[] buffer, out int numberOfBytesRead)
     {
         int cSize = size;
         var bytes = new byte[size];
         bool success = false;
 
         numberOfBytesRead = 0;
-        buffer = ReadOnlySpan<byte>.Empty;
+        buffer = Array.Empty<byte>();
 
         try
         {
@@ -84,7 +86,7 @@ public class Native : MemoryPlugin
                 }
                 else
                 {
-                    buffer = new ReadOnlySpan<byte>(bytes, 0, numberOfBytesRead);
+                    buffer = bytes[..numberOfBytesRead];
                 }
 
                 return numberOfBytesRead == size && buffer.Length > 0;
