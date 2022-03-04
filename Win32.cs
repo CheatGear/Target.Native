@@ -120,7 +120,7 @@ internal static class Win32
         public uint Th32ProcessID;
         public uint GlblcntUsage;
         public uint ProccntUsage;
-        public IntPtr ModBaseAddr;
+        public UIntPtr ModBaseAddr;
         public uint ModBaseSize;
         public IntPtr HModule;
 

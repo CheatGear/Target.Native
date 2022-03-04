@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
+using System.IO;
 using System.Runtime.InteropServices;
 using CG.Framework.Attributes;
 using CG.Framework.Plugin.Memory;
@@ -11,7 +11,7 @@ namespace CG.Memory;
 [PluginInfo("CorrM", "Native", "Use current system API to read/write memory process", "https://github.com/CheatGear", "https://github.com/CheatGear/Memory.Native")]
 public class Native : MemoryPlugin
 {
-    private MemoryInitInfo _initInfo;
+    private MemoryTargetInfo _targetInfo;
     private IntPtr _pHandle;
     private Win32.SystemInfo _sysInfo;
     private int _memoryBasicInformationSize;
@@ -35,17 +35,35 @@ public class Native : MemoryPlugin
         return _sysInfo.MaximumApplicationAddress;
     }
 
-    protected override bool OnInit(MemoryInitInfo info)
+    private void Clean()
     {
-        _initInfo = info;
+        if (_pHandle != IntPtr.Zero && _pHandle != Win32.InvalidHandleValue)
+            Win32.CloseHandle(_pHandle);
+    }
 
-        _pHandle = Win32.OpenProcess(Win32.ProcessAccessFlags.All, false, info.Process.Id);
-        Is64Bit = Is64BitProcess(_pHandle);
+    private bool ValidTargetHandle()
+    {
+        return _pHandle != IntPtr.Zero && _pHandle != Win32.InvalidHandleValue;
+    }
 
+    protected override bool OnInit()
+    {
         _memoryBasicInformationSize = Marshal.SizeOf<Win32.MemoryBasicInformation>();
         Win32.GetSystemInfo(out _sysInfo);
 
         return true;
+    }
+
+    protected override bool OnTargetChange(MemoryTargetInfo targetInfo)
+    {
+        _targetInfo = targetInfo;
+
+        Clean();
+
+        _pHandle = Win32.OpenProcess(Win32.ProcessAccessFlags.All, false, targetInfo.Process.Id);
+        Is64Bit = Is64BitProcess(_pHandle);
+
+        return ValidTargetHandle();
     }
 
     public override bool ReadBytes(UIntPtr address, int size, out byte[] buffer, out int numberOfBytesRead)
@@ -104,13 +122,37 @@ public class Native : MemoryPlugin
         return region;
     }
 
-    public override List<MemoryModuleInfo> GetModuleList()
+    public override MemoryModuleInfo? GetMainModule()
+    {
+        ProcessModule? processModule;
+
+        try
+        {
+            processModule = _targetInfo.Process.MainModule;
+            if (processModule is null)
+                return null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+
+        return new MemoryModuleInfo()
+        {
+            Address = (UIntPtr)processModule.BaseAddress.ToInt64(),
+            Size = (uint)processModule.ModuleMemorySize,
+            Name = Path.GetFileName(processModule.FileName) ?? string.Empty,
+            Path = processModule.FileName ?? string.Empty
+        };
+    }
+
+    public override List<MemoryModuleInfo> GetModulesList()
     {
         var ret = new List<MemoryModuleInfo>();
         // To Avoid Some Games not share it's modules, or could be emulator game
         try
         {
-            IntPtr hSnap = Win32.CreateToolhelp32Snapshot(Win32.SnapshotFlags.Module | Win32.SnapshotFlags.Module32, _initInfo.Process.Id);
+            IntPtr hSnap = Win32.CreateToolhelp32Snapshot(Win32.SnapshotFlags.Module | Win32.SnapshotFlags.Module32, _targetInfo.Process.Id);
             if (hSnap != Win32.InvalidHandleValue)
             {
                 var modEntry = new Win32.ModuleEntry32()
@@ -122,7 +164,15 @@ public class Native : MemoryPlugin
                 {
                     do
                     {
-                        ret.Add(modEntry);
+                        var mod = new MemoryModuleInfo()
+                        {
+                            Handle = modEntry.HModule,
+                            Address = modEntry.ModBaseAddr,
+                            Size = modEntry.ModBaseSize,
+                            Name = modEntry.SzModule,
+                            Path = modEntry.SzExePath
+                        };
+                        ret.Add(mod);
                     } while (Win32.Module32Next(hSnap, ref modEntry));
                 }
             }
@@ -172,7 +222,9 @@ public class Native : MemoryPlugin
     {
         base.Dispose();
 
-        Win32.CloseHandle(_pHandle);
+        if (ValidTargetHandle())
+            Win32.CloseHandle(_pHandle);
+
         GC.SuppressFinalize(this);
     }
 }
