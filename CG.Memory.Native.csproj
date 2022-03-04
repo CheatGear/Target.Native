@@ -6,6 +6,7 @@
 		<RootNamespace>CG.Memory</RootNamespace>
 		<AssemblyVersion>1.0.1.0</AssemblyVersion>
 		<FileVersion>1.0.1.0</FileVersion>
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
 	<ItemGroup>
