@@ -191,13 +191,13 @@ public class Native : MemoryPlugin
         return uIntPtr.ToUInt64() < GameStartAddress().ToUInt64() || uIntPtr.ToUInt64() > GameEndAddress().ToUInt64();
     }
 
-    public override bool IsValidRemoteAddress(UIntPtr address)
+    public override bool IsValidRemoteAddress(UIntPtr remoteAddress)
     {
         // TODO: Very bad when called in hot-path
-        if (address == UIntPtr.Zero || IsBadAddress(address))
+        if (remoteAddress == UIntPtr.Zero || IsBadAddress(remoteAddress))
             return false;
 
-        if (Win32.VirtualQueryEx(_pHandle, address, out Win32.MemoryBasicInformation info, (uint)_memoryBasicInformationSize) != 0)
+        if (Win32.VirtualQueryEx(_pHandle, remoteAddress, out Win32.MemoryBasicInformation info, (uint)_memoryBasicInformationSize) != 0)
             return info.Protect != 0 && (info.Protect & Win32.MemoryProtection.PageNoAccess) == 0;
 
         return false;
