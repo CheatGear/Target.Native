@@ -18,7 +18,6 @@ public class Native : MemoryPlugin
 
     public override Version TargetFrameworkVersion { get; } = new(3, 0, 0);
     public override Version PluginVersion { get; } = new(3, 0, 0);
-    public override bool Is64Bit { get; protected set; }
 
     private static bool Is64BitProcess(IntPtr processHandle)
     {
@@ -35,15 +34,15 @@ public class Native : MemoryPlugin
         return _sysInfo.MaximumApplicationAddress;
     }
 
-    private void Clean()
-    {
-        if (_pHandle != IntPtr.Zero && _pHandle != Win32.InvalidHandleValue)
-            Win32.CloseHandle(_pHandle);
-    }
-
     private bool ValidTargetHandle()
     {
         return _pHandle != IntPtr.Zero && _pHandle != Win32.InvalidHandleValue;
+    }
+
+    private void Clean()
+    {
+        if (ValidTargetHandle())
+            Win32.CloseHandle(_pHandle);
     }
 
     protected override bool OnInit()
@@ -222,8 +221,7 @@ public class Native : MemoryPlugin
     {
         base.Dispose();
 
-        if (ValidTargetHandle())
-            Win32.CloseHandle(_pHandle);
+        Clean();
 
         GC.SuppressFinalize(this);
     }
