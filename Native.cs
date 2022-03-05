@@ -41,8 +41,16 @@ public class Native : MemoryPlugin
 
     private void Clean()
     {
-        if (ValidTargetHandle())
-            Win32.CloseHandle(_pHandle);
+        // Suspend games case an Exception
+        try
+        {
+            if (ValidTargetHandle())
+                Win32.CloseHandle(_pHandle);
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
     }
 
     protected override bool OnInit()
