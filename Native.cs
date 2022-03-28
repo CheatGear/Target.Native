@@ -227,8 +227,6 @@ public class Native : MemoryPlugin
 
     public override void Dispose()
     {
-        GC.SuppressFinalize(this);
-
         Clean();
     }
 }
