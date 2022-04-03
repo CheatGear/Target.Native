@@ -91,11 +91,16 @@ public class Native : MemoryPlugin
                 }
             }
 
-            buffer = bytes[0..numberOfBytesRead];
-            bool allRead = numberOfBytesRead == size && buffer.Length > 0;
-            numberOfBytesRead = cSize;
-            return allRead;
+            buffer = numberOfBytesRead > bytes.Length
+                ? bytes
+                : bytes[..numberOfBytesRead];
+            break;
         }
+
+        bool allRead = numberOfBytesRead == size && buffer.Length > 0;
+        numberOfBytesRead = cSize;
+
+        return allRead;
     }
 
     public override bool WriteBytes(UIntPtr address, byte[] buffer, out int numberOfBytesWritten)
