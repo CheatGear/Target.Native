@@ -91,7 +91,7 @@ public class Native : MemoryPlugin
                 }
             }
 
-            buffer = numberOfBytesRead > bytes.Length
+            buffer = numberOfBytesRead < 0 || numberOfBytesRead > bytes.Length
                 ? bytes
                 : bytes[..numberOfBytesRead];
             break;
