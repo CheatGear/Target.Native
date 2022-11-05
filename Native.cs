@@ -2,8 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using CG.Framework.Attributes;
+using CG.Framework.Helper;
+using CG.Framework.Helper.Platform;
 using CG.Framework.Plugin.Memory;
 
 namespace CG.Memory;
@@ -11,6 +15,8 @@ namespace CG.Memory;
 [PluginInfo("CorrM", "Native", "Use current system API to read/write memory process", "https://github.com/CheatGear", "https://github.com/CheatGear/Memory.Native")]
 public class Native : MemoryPlugin
 {
+    private static Win32.NtQueryVirtualMemory? _ntQueryVirtualMemory;
+
     private MemoryTargetInfo _targetInfo;
     private IntPtr _pHandle;
     private Win32.SystemInfo _sysInfo;
@@ -18,11 +24,6 @@ public class Native : MemoryPlugin
 
     public override Version TargetFrameworkVersion { get; } = new(3, 0, 0);
     public override Version PluginVersion { get; } = new(3, 0, 0);
-
-    private static bool Is64BitProcess(IntPtr processHandle)
-    {
-        return Win32.IsWow64Process(processHandle, out bool retVal) && !retVal;
-    }
 
     private UIntPtr GameStartAddress()
     {
@@ -68,7 +69,8 @@ public class Native : MemoryPlugin
         Clean();
 
         _pHandle = Win32.OpenProcess(Win32.ProcessAccessFlags.All, false, targetInfo.Process.Id);
-        Is64Bit = Is64BitProcess(_pHandle);
+        Is64Bit = UtilsExtensions.Is64BitProcess(_pHandle);
+        _ntQueryVirtualMemory = Win32.GetProcAddress<Win32.NtQueryVirtualMemory>("ntdll.dll", "NtQueryVirtualMemory");
 
         return ValidTargetHandle();
     }
@@ -151,7 +153,7 @@ public class Native : MemoryPlugin
 
         return new MemoryModuleInfo()
         {
-            Address = (UIntPtr)processModule.BaseAddress.ToInt64(),
+            Address = processModule.BaseAddress,
             Size = (uint)processModule.ModuleMemorySize,
             Name = Path.GetFileName(processModule.FileName) ?? string.Empty,
             Path = processModule.FileName ?? string.Empty
@@ -188,6 +190,7 @@ public class Native : MemoryPlugin
                     } while (Win32.Module32Next(hSnap, ref modEntry));
                 }
             }
+
             Win32.CloseHandle(hSnap);
         }
         catch
@@ -230,8 +233,67 @@ public class Native : MemoryPlugin
         return Win32.NtTerminateProcess(_pHandle, 0) >= 0;
     }
 
+    public override bool IsStaticAddress(UIntPtr address)
+    {
+        /*
+         * Thanks To Roman_Ablo @ GuidedHacking
+         * https://guidedhacking.com/threads/hyperscan-fast-vast-memory-scanner.9659/
+         * Converted to C# By CorrM
+         */
+
+        if (_ntQueryVirtualMemory is null)
+            throw new NullReferenceException("'_ntQueryVirtualMemory' can't be null");
+
+        if (!ValidTargetHandle())
+            throw new Exception("Target process is not valid");
+
+        if (address == UIntPtr.Zero)
+            return false;
+
+        ulong length = 0;
+        using var sectionInformation = new StructAllocator<Win32.SectionInfo>();
+
+        int retStatus = _ntQueryVirtualMemory(
+            (UIntPtr)_pHandle.ToNum(),
+            address,
+            Win32.MemoryInformationClass.MemoryMappedFilenameInformation,
+            sectionInformation.UnManagedPtr.ToUIntPtr(),
+            (ulong)Marshal.SizeOf<Win32.SectionInfo>(),
+            ref length);
+
+        // 32bit game
+        if (!Is64Bit)
+            return Win32.NtSuccess(retStatus);
+
+        if (!Win32.NtSuccess(retStatus))
+            return false;
+
+        sectionInformation.Update();
+        string deviceName = sectionInformation.ManagedStruct.SzData;
+
+        /*
+        string filePath = new string(deviceName);
+        for (int i = 0; i < 3; i++)
+            filePath = filePath[(filePath.IndexOf('\\') + 1)..];
+        filePath = filePath.Trim('\0');
+        */
+
+        List<string> drivesLetter = DriveInfo.GetDrives().Select(d => d.Name.Replace("\\", "")).ToList();
+        foreach (string driveLetter in drivesLetter)
+        {
+            var sb = new StringBuilder(64);
+            _ = Win32.QueryDosDevice(driveLetter, sb, 64 * 2); // * 2 Unicode
+
+            if (deviceName.Contains(sb.ToString()))
+                return true;
+        }
+
+        return false;
+    }
+
     public override void Dispose()
     {
+        GC.SuppressFinalize(this);
         Clean();
     }
 }
