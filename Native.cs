@@ -278,7 +278,7 @@ public class Native : MemoryPlugin
         filePath = filePath.Trim('\0');
         */
 
-        List<string> drivesLetter = DriveInfo.GetDrives().Select(d => d.Name.Replace("\\", "")).ToList();
+        string[] drivesLetter = DriveInfo.GetDrives().Select(d => d.Name.Replace("\\", "")).ToArray();
         foreach (string driveLetter in drivesLetter)
         {
             var sb = new StringBuilder(64);
