@@ -21,7 +21,7 @@ public class Native : MemoryPlugin
         return IsValidProcessHandle();
     }
 
-    public override bool ReadBytes(UIntPtr address, int size, out byte[] buffer, out int numberOfBytesRead)
+    public override bool ReadBytes(nuint address, int size, out byte[] buffer, out int numberOfBytesRead)
     {
         int cSize = size;
         var bytes = new byte[size];
@@ -51,7 +51,7 @@ public class Native : MemoryPlugin
         return allRead;
     }
 
-    public override bool WriteBytes(UIntPtr address, byte[] buffer, out int numberOfBytesWritten)
+    public override bool WriteBytes(nuint address, byte[] buffer, out int numberOfBytesWritten)
     {
         Win32.WriteProcessMemory(ProcessHandle, address, buffer, buffer.Length, out numberOfBytesWritten);
         return numberOfBytesWritten == (uint)buffer.Length;
