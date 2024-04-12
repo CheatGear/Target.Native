@@ -21,7 +21,8 @@ public sealed class Win32MemoryHandler : IMemoryHandler
     {
         _target = target;
         _memoryBasicInformationSize = Marshal.SizeOf<Win32.MemoryBasicInformation>();
-        _ntQueryVirtualMemory = Win32.GetProcAddressDlg<Win32.NtQueryVirtualMemory>("ntdll.dll", "NtQueryVirtualMemory");
+        _ntQueryVirtualMemory =
+            Win32.GetProcAddressDlg<Win32.NtQueryVirtualMemory>("ntdll.dll", "NtQueryVirtualMemory");
         _processHandle = nint.Zero;
     }
 
@@ -52,13 +53,19 @@ public sealed class Win32MemoryHandler : IMemoryHandler
          */
 
         if (_ntQueryVirtualMemory is null)
+        {
             throw new NullReferenceException("'_ntQueryVirtualMemory' can't be null");
+        }
 
         if (!_target.IsValidTarget())
+        {
             throw new Exception("Target process is not valid");
+        }
 
         if (address == nuint.Zero)
+        {
             return false;
+        }
 
         ulong length = 0;
         using var sectionInformation = new StructAllocator<Win32.SectionInfo>();
@@ -69,14 +76,19 @@ public sealed class Win32MemoryHandler : IMemoryHandler
             Win32.MemoryInformationClass.MemoryMappedFilenameInformation,
             sectionInformation.UnManagedPtr.ToUIntPtr(),
             (ulong)Marshal.SizeOf<Win32.SectionInfo>(),
-            ref length);
+            ref length
+        );
 
         // 32bit game
         if (!_target.Process64Bit)
+        {
             return Win32.NtSuccess(retStatus);
+        }
 
         if (!Win32.NtSuccess(retStatus))
+        {
             return false;
+        }
 
         sectionInformation.Update();
         string deviceName = sectionInformation.ManagedStruct.SzData;
@@ -95,7 +107,9 @@ public sealed class Win32MemoryHandler : IMemoryHandler
             _ = Win32.QueryDosDevice(driveLetter, sb, 64 * 2); // * 2 Unicode
 
             if (deviceName.Contains(sb.ToString()))
+            {
                 return true;
+            }
         }
 
         return false;
@@ -105,16 +119,21 @@ public sealed class Win32MemoryHandler : IMemoryHandler
     public bool IsValidRemoteAddress(nuint address)
     {
         if (address == nuint.Zero || IsBadAddress(address))
+        {
             return false;
+        }
 
         bool valid = Win32.VirtualQueryEx(
-            _processHandle,
-            address,
-            out Win32.MemoryBasicInformation info,
-            (uint)_memoryBasicInformationSize
-        ) == _memoryBasicInformationSize;
+                         _processHandle,
+                         address,
+                         out Win32.MemoryBasicInformation info,
+                         (uint)_memoryBasicInformationSize
+                     )
+                     == _memoryBasicInformationSize;
         if (!valid)
+        {
             return false;
+        }
 
         return (info.Protect & Win32.MemoryProtection.PageNoAccess) == 0;
     }
@@ -133,6 +152,11 @@ public sealed class Win32MemoryHandler : IMemoryHandler
     {
         ref readonly byte bytesReference = ref MemoryMarshal.AsRef<byte>(bytes);
 
-        return Win32.WriteProcessMemory(_processHandle, address, in bytesReference, bytes.Length, out numberOfBytesWritten);
+        return Win32.WriteProcessMemory(_processHandle,
+            address,
+            in bytesReference,
+            bytes.Length,
+            out numberOfBytesWritten
+        );
     }
 }

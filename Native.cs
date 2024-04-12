@@ -10,7 +10,13 @@ using CG.SDK.Dotnet.Plugin.Target;
 
 namespace CG.Memory;
 
-[PluginInfo(Name = nameof(Native), Version = "5.0.0", Author = "CorrM", Description = "Use current system API to read/write memory process", WebsiteLink = "https://github.com/CheatGear", SourceCodeLink = "https://github.com/CheatGear/Memory.Native")]
+[PluginInfo(Name = nameof(Native),
+    Version = "5.0.0",
+    Author = "CorrM",
+    Description = "Use current system API to read/write memory process",
+    WebsiteLink = "https://github.com/CheatGear",
+    SourceCodeLink = "https://github.com/CheatGear/Memory.Native"
+)]
 public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
 {
     private readonly int _memoryBasicInformationSize;
@@ -37,7 +43,9 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
     private void AssertTarget()
     {
         if (IsValidHandle(_processHandle))
+        {
             return;
+        }
 
         throw new Exception("No target");
     }
@@ -53,7 +61,9 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
         {
             // Suspend games case an Exception
             if (IsValidHandle(_processHandle))
+            {
                 Win32.CloseHandle(_processHandle);
+            }
         }
         catch (Exception)
         {
@@ -88,9 +98,12 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
         string fullPath = sb.ToString(0, capacity);
 
         // To Avoid Some Games not share it's modules, or could be emulator/protected game
-        nint hSnap = Win32.CreateToolhelp32Snapshot(Win32.SnapshotFlags.Module | Win32.SnapshotFlags.Module32, ProcessId);
+        nint hSnap =
+            Win32.CreateToolhelp32Snapshot(Win32.SnapshotFlags.Module | Win32.SnapshotFlags.Module32, ProcessId);
         if (!IsValidHandle(hSnap))
+        {
             return ret;
+        }
 
         try
         {
@@ -148,9 +161,13 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
         AssertTarget();
 
         if (_maxValidAddress is not null)
+        {
             return _maxValidAddress.Value;
+        }
 
-        return (nuint)(_sysInfo.ProcessorArchitecture == Win32.ProcessorArchitecture.X64 && Process64Bit ? 0x800000000000 : 0x100000000);
+        return (nuint)(_sysInfo.ProcessorArchitecture == Win32.ProcessorArchitecture.X64 && Process64Bit
+            ? 0x800000000000
+            : 0x100000000);
     }
 
     public override MemRegionInfo? GetMemoryRegion(nuint address)
@@ -159,14 +176,17 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
 
         // Get Region information
         bool valid = Win32.VirtualQueryEx(
-            _processHandle,
-            address,
-            out Win32.MemoryBasicInformation info,
-            (uint)_memoryBasicInformationSize
-        ) == _memoryBasicInformationSize;
+                         _processHandle,
+                         address,
+                         out Win32.MemoryBasicInformation info,
+                         (uint)_memoryBasicInformationSize
+                     )
+                     == _memoryBasicInformationSize;
 
         if (!valid)
+        {
             return null;
+        }
 
         var region = new MemRegionInfo()
         {
@@ -187,7 +207,9 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
 
         bool check = ((Win32.MemoryState)memRegion.State & Win32.MemoryState.MemCommit) != 0;
         if (!check)
+        {
             return false;
+        }
 
         check = ((Win32.MemoryProtection)memRegion.Protect & Win32.MemoryProtection.PageNoAccess) == 0
                 && ((Win32.MemoryProtection)memRegion.Protect & Win32.MemoryProtection.PageTargetsInvalid) == 0
