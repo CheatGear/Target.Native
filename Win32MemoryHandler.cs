@@ -12,9 +12,9 @@ namespace CG.Memory;
 
 public sealed class Win32MemoryHandler : IMemoryHandler
 {
-    private readonly Native _target;
     private readonly int _memoryBasicInformationSize;
     private readonly Win32.NtQueryVirtualMemory _ntQueryVirtualMemory;
+    private readonly Native _target;
     private nint _processHandle;
 
     public Win32MemoryHandler(Native target)
@@ -26,21 +26,10 @@ public sealed class Win32MemoryHandler : IMemoryHandler
         _processHandle = nint.Zero;
     }
 
-    public void OnTargetReady(nint processHandle)
-    {
-        _processHandle = processHandle;
-    }
-
-    public void OnTargetFree()
-    {
-    }
-
     /// <inheritdoc />
     public bool IsBadAddress(nuint address)
     {
-        return address.IsNull()
-               || address < _target.GetMinValidAddress()
-               || address > _target.GetMaxValidAddress();
+        return address.IsNull() || address < _target.GetMinValidAddress() || address > _target.GetMaxValidAddress();
     }
 
     /// <inheritdoc />
@@ -128,8 +117,8 @@ public sealed class Win32MemoryHandler : IMemoryHandler
                          address,
                          out Win32.MemoryBasicInformation info,
                          (uint)_memoryBasicInformationSize
-                     )
-                     == _memoryBasicInformationSize;
+                     ) ==
+                     _memoryBasicInformationSize;
         if (!valid)
         {
             return false;
@@ -152,11 +141,21 @@ public sealed class Win32MemoryHandler : IMemoryHandler
     {
         ref readonly byte bytesReference = ref MemoryMarshal.AsRef<byte>(bytes);
 
-        return Win32.WriteProcessMemory(_processHandle,
+        return Win32.WriteProcessMemory(
+            _processHandle,
             address,
             in bytesReference,
             bytes.Length,
             out numberOfBytesWritten
         );
+    }
+
+    public void OnTargetReady(nint processHandle)
+    {
+        _processHandle = processHandle;
+    }
+
+    public void OnTargetFree()
+    {
     }
 }

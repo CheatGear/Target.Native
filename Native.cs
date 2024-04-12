@@ -10,7 +10,8 @@ using CG.SDK.Dotnet.Plugin.Target;
 
 namespace CG.Memory;
 
-[PluginInfo(Name = nameof(Native),
+[PluginInfo(
+    Name = nameof(Native),
     Version = "5.0.0",
     Author = "CorrM",
     Description = "Use current system API to read/write memory process",
@@ -21,11 +22,9 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
 {
     private readonly int _memoryBasicInformationSize;
     private readonly Win32.SystemInfo _sysInfo;
-    private nint _processHandle;
-    private nuint? _minValidAddress;
     private nuint? _maxValidAddress;
-
-    public override Win32MemoryHandler MemoryHandler { get; }
+    private nuint? _minValidAddress;
+    private nint _processHandle;
 
     public Native()
     {
@@ -34,6 +33,8 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
 
         MemoryHandler = new Win32MemoryHandler(this);
     }
+
+    public override Win32MemoryHandler MemoryHandler { get; }
 
     private static bool IsValidHandle(nint handle)
     {
@@ -107,23 +108,20 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
 
         try
         {
-            var modEntry = new Win32.ModuleEntry32()
-            {
-                DwSize = (uint)Marshal.SizeOf(typeof(Win32.ModuleEntry32))
-            };
+            var modEntry = new Win32.ModuleEntry32 { DwSize = (uint)Marshal.SizeOf(typeof(Win32.ModuleEntry32)) };
 
             if (Win32.Module32First(hSnap, ref modEntry))
             {
                 do
                 {
-                    var mod = new MemModuleInfo()
+                    var mod = new MemModuleInfo
                     {
                         Handle = modEntry.HModule,
                         Address = modEntry.ModBaseAddr.ToUIntPtr(),
                         Size = modEntry.ModBaseSize,
                         Name = modEntry.SzModule,
                         Path = modEntry.SzExePath,
-                        MainModule = modEntry.SzExePath == fullPath
+                        MainModule = modEntry.SzExePath == fullPath,
                     };
                     ret.Add(mod);
                 } while (Win32.Module32Next(hSnap, ref modEntry));
@@ -180,22 +178,22 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
                          address,
                          out Win32.MemoryBasicInformation info,
                          (uint)_memoryBasicInformationSize
-                     )
-                     == _memoryBasicInformationSize;
+                     ) ==
+                     _memoryBasicInformationSize;
 
         if (!valid)
         {
             return null;
         }
 
-        var region = new MemRegionInfo()
+        var region = new MemRegionInfo
         {
             AllocationBase = info.AllocationBase,
             BaseAddress = info.BaseAddress,
             Size = info.RegionSize.ToNum(),
             State = (uint)info.State,
             Protect = (uint)info.Protect,
-            Type = (uint)info.Type
+            Type = (uint)info.Type,
         };
 
         return region;
@@ -211,10 +209,10 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
             return false;
         }
 
-        check = ((Win32.MemoryProtection)memRegion.Protect & Win32.MemoryProtection.PageNoAccess) == 0
-                && ((Win32.MemoryProtection)memRegion.Protect & Win32.MemoryProtection.PageTargetsInvalid) == 0
-                && ((Win32.MemoryProtection)memRegion.Protect & Win32.MemoryProtection.PageGuard) == 0
-                && ((Win32.MemoryProtection)memRegion.Protect & Win32.MemoryProtection.PageNocache) == 0;
+        check = ((Win32.MemoryProtection)memRegion.Protect & Win32.MemoryProtection.PageNoAccess) == 0 &&
+                ((Win32.MemoryProtection)memRegion.Protect & Win32.MemoryProtection.PageTargetsInvalid) == 0 &&
+                ((Win32.MemoryProtection)memRegion.Protect & Win32.MemoryProtection.PageGuard) == 0 &&
+                ((Win32.MemoryProtection)memRegion.Protect & Win32.MemoryProtection.PageNocache) == 0;
 
         return check;
     }
