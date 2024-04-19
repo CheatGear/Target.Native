@@ -20,6 +20,13 @@
         <ProjectReference Include="..\..\..\SDK\CG.SDK.Dotnet\CG.SDK.Dotnet.csproj"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <PackageReference Include="Meziantou.Analyzer" Version="2.0.149">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Debug'">
         <Exec Command="xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)build\Plugins\Target\&quot; /F /Y /I"/>
     </Target>
