@@ -99,8 +99,10 @@ public sealed class Native : TargetHandlerPlugin<Win32MemoryHandler>
         string fullPath = sb.ToString(0, capacity);
 
         // To Avoid Some Games not share it's modules, or could be emulator/protected game
-        nint hSnap =
-            Win32.CreateToolhelp32Snapshot(Win32.SnapshotFlags.Module | Win32.SnapshotFlags.Module32, ProcessId);
+        nint hSnap = Win32.CreateToolhelp32Snapshot(
+            Win32.SnapshotFlags.Module | Win32.SnapshotFlags.Module32,
+            ProcessId
+        );
         if (!IsValidHandle(hSnap))
         {
             return ret;
